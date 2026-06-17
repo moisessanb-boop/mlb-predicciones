@@ -1,7 +1,7 @@
 name: Rutina MLB
 
 on:
-  workflow_dispatch:  # solo manual, desde GitHub app o web
+  workflow_dispatch:
 
 jobs:
   rutina:
@@ -41,6 +41,9 @@ jobs:
       - name: Bullpen fatiga
         run: python3 bullpen_fatiga.py
 
+      - name: Picks del dia
+        run: python3 picks_del_dia.py
+
       - name: Verificar resultados de ayer
         run: python3 verificar_resultados.py
 
@@ -48,6 +51,6 @@ jobs:
         run: |
           git config user.name  "MLB Bot"
           git config user.email "mlb-bot@github.com"
-          git add historial_top5.csv historial_todos.csv
+          git add historial_top5.csv historial_todos.csv || true
           git diff --staged --quiet || git commit -m "Picks $(date '+%Y-%m-%d')"
           git push
