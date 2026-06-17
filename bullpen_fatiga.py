@@ -3,59 +3,55 @@ from datetime import datetime, timedelta
 
 df = pd.read_csv('datos_mlb_limpio.csv')
 df['Fecha'] = pd.to_datetime(df['Fecha'])
+df['Inn'] = pd.to_numeric(df['Inn'], errors='coerce').fillna(9)
+df['R']   = pd.to_numeric(df['R'],   errors='coerce').fillna(0)
+df['RA']  = pd.to_numeric(df['RA'],  errors='coerce').fillna(0)
 
 hoy = pd.Timestamp(datetime.now().date())
-
 equipos_activos = df[df['Season'] == hoy.year]['Team'].unique()
 
-# ---------- Calcular índice de fatiga por equipo ----------
+def calcular_indice(grupo, hoy):
+    ultimo = grupo['Fecha'].max()
+    dias_descanso = (hoy - ultimo).days
+    ultimos_4 = grupo.sort_values('Fecha').tail(4).copy()
+    ultimos_4['Margen'] = abs(ultimos_4['R'] - ultimos_4['RA'])
+    fatiga = 0
+    for _, g in ultimos_4.iterrows():
+        extras = max(0, g['Inn'] - 9)
+        margen = g['Margen']
+        if margen <= 1:   peso = 3
+        elif margen <= 2: peso = 2
+        elif margen <= 4: peso = 1
+        else:             peso = 0
+        fatiga += extras * 2 + peso
+    fatiga -= dias_descanso * 2
+    return fatiga, ultimo.date(), dias_descanso
+
 indices = {}
 detalle = []
-
 for equipo in equipos_activos:
     grupo = df[(df['Team'] == equipo) & (df['Fecha'] <= hoy)].sort_values('Fecha')
-    if grupo.empty:
+    if len(grupo) < 2:
         continue
-
-    ultimo_partido = grupo['Fecha'].max()
-    dias_descanso = (hoy - ultimo_partido).days
-
-    ultimos_2 = grupo.tail(2).copy()
-    ultimos_2['Inn'] = pd.to_numeric(ultimos_2['Inn'], errors='coerce').fillna(9)
-    entradas_extra = (ultimos_2['Inn'] - 9).clip(lower=0).sum()
-
-    ult_2dias = grupo[grupo['Fecha'] >= hoy - timedelta(days=1)]
-    dobles_juegos = int((ult_2dias.groupby('Fecha').size() >= 2).sum())
-
-    indice = entradas_extra + (dobles_juegos * 3) - (dias_descanso * 2)
+    indice, ultimo, dias = calcular_indice(grupo, hoy)
     indices[equipo] = indice
-
-    detalle.append({
-        'Team': equipo,
-        'Ultimo_partido': ultimo_partido.date(),
-        'Dias_descanso': dias_descanso,
-        'Entradas_extra': entradas_extra,
-        'Dobles_juegos': dobles_juegos,
-        'Indice': indice
-    })
+    detalle.append({'Team': equipo, 'Ultimo_partido': ultimo,
+                    'Dias_descanso': dias, 'Indice': indice})
 
 df_detalle = pd.DataFrame(detalle).sort_values('Indice', ascending=False).reset_index(drop=True)
 
-# ---------- Top 3 cansado / fresco ----------
-print("=== TOP 3 BULLPEN MAS CANSADO ===")
+print("=== TOP 3 BULLPEN MAS CANSADO (juegos recientes muy cerrados) ===")
 print(df_detalle.head(3).to_string(index=False))
-print("\n=== TOP 3 BULLPEN MAS FRESCO ===")
+print("\n=== TOP 3 BULLPEN MAS FRESCO (goleadas o descanso reciente) ===")
 print(df_detalle.tail(3).sort_values('Indice').to_string(index=False))
 
-# ---------- Señal Over/Under para los partidos de HOY ----------
 try:
     partidos = pd.read_csv('partidos_hoy.csv')
-    pred = pd.read_csv('predicciones_hoy.csv')
+    pred     = pd.read_csv('predicciones_hoy.csv')
 except FileNotFoundError:
-    print("\nNo hay partidos de hoy todavia. Corre obtener_partidos_hoy.py y predecir_hoy.py primero.")
+    print("\nNo hay partidos de hoy. Corre obtener_partidos_hoy.py y predecir_hoy.py primero.")
     exit()
 
-# Extraer total estimado por partido
 totales = {}
 for _, fila in pred.iterrows():
     llave = f"{fila['Visitante']} @ {fila['Local']}"
@@ -70,24 +66,20 @@ for _, p in partidos.iterrows():
     llave = f"{visitante} @ {local}"
     total_modelo = totales.get(llave, None)
 
-    if fat_comb >= 3:
+    if fat_comb >= 6:
         senal = 'OVER  ▲'
-        nota  = 'Bullpen cansado → más carreras tardías esperadas'
-    elif fat_comb <= -6:
+    elif fat_comb <= -2:
         senal = 'UNDER ▼'
-        nota  = 'Ambos bullpens frescos → pueden cerrar entradas'
     else:
         senal = 'NEUTRO ─'
-        nota  = 'Sin señal clara de bullpen'
 
     resultados.append({
-        'Partido': llave,
+        'Partido':       llave,
         'Bullpen_Local': fat_l,
         'Bullpen_Visit': fat_v,
-        'Fat_Comb': fat_comb,
-        'Total_Modelo': total_modelo,
+        'Fat_Comb':      fat_comb,
+        'Total_Modelo':  total_modelo,
         'Señal_Bullpen': senal,
-        'Nota': nota
     })
 
 df_r = pd.DataFrame(resultados).sort_values('Fat_Comb', ascending=False).reset_index(drop=True)
@@ -98,14 +90,34 @@ print(f"{'#':<3} {'Partido':<18} {'B.Local':>8} {'B.Visit':>8} {'Comb':>6}  {'To
 print("-" * 72)
 for i, row in df_r.iterrows():
     total_str = f"{row['Total_Modelo']:.1f}" if row['Total_Modelo'] is not None else "  N/A"
-    print(f"{i:<3} {row['Partido']:<18} {row['Bullpen_Local']:>8.1f} {row['Bullpen_Visit']:>8.1f} {row['Fat_Comb']:>6.1f}  {total_str:>10}  {row['Señal_Bullpen']}")
+    print(f"{i:<3} {row['Partido']:<18} {row['Bullpen_Local']:>8.1f} "
+          f"{row['Bullpen_Visit']:>8.1f} {row['Fat_Comb']:>6.1f}  "
+          f"{total_str:>10}  {row['Señal_Bullpen']}")
 
 print("\nLeyenda:")
-print("  OVER  ▲ = Bullpen cansado, más carreras tardías esperadas")
-print("  UNDER ▼ = Ambos bullpens frescos, pueden cerrar entradas")
-print("  NEUTRO ─ = Sin señal clara de bullpen")
+print("  OVER  ▲ = Ambos bullpens exigidos recientemente (juegos cerrados)")
+print("  UNDER ▼ = Bullpens descansados o con victorias/derrotas holgadas")
+print("  NEUTRO ─ = Sin señal clara")
 print("\nNota: esta señal complementa el Total del modelo, no lo reemplaza.")
-print("  Mayor impacto cuando AMBAS señales apuntan en la misma dirección.")
 
 df_r.to_csv('bullpen_fatiga.csv', index=False)
 print("\nGuardado en bullpen_fatiga.csv")
+
+TOP_N = 2
+over   = df_r[df_r['Señal_Bullpen'] == 'OVER  ▲'].head(TOP_N)
+under  = df_r[df_r['Señal_Bullpen'] == 'UNDER ▼'].head(TOP_N)
+neutro = df_r[df_r['Señal_Bullpen'] == 'NEUTRO ─'].head(TOP_N)
+
+print("\n=== RESUMEN DE SEÑALES BULLPEN ===\n")
+for titulo, grupo in [
+    ('OVER  ▲  (bullpens exigidos → más carreras esperadas)', over),
+    ('UNDER ▼  (bullpens frescos → menos carreras esperadas)', under),
+    ('NEUTRO ─  (sin señal clara)', neutro),
+]:
+    print(f"  {titulo}")
+    if grupo.empty:
+        print("    Sin partidos con esta señal hoy")
+    else:
+        for _, row in grupo.iterrows():
+            print(f"    {row['Partido']:<18}  Comb: {row['Fat_Comb']:>5.1f}  Total modelo: {row['Total_Modelo']:.1f}")
+    print()
