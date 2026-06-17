@@ -1,0 +1,53 @@
+name: Rutina MLB
+
+on:
+  workflow_dispatch:  # solo manual, desde GitHub app o web
+
+jobs:
+  rutina:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Pipeline completo
+        run: python3 pipeline_nube.py
+
+      - name: Obtener partidos de hoy
+        run: python3 obtener_partidos_hoy.py
+
+      - name: Generar predicciones
+        run: python3 predecir_hoy.py
+
+      - name: Ver pronosticos
+        run: python3 ver_pronosticos.py
+
+      - name: Registrar picks
+        run: python3 registrar_prediccion.py
+
+      - name: Bullpen fatiga
+        run: python3 bullpen_fatiga.py
+
+      - name: Verificar resultados de ayer
+        run: python3 verificar_resultados.py
+
+      - name: Guardar resultados
+        run: |
+          git config user.name  "MLB Bot"
+          git config user.email "mlb-bot@github.com"
+          git add historial_top5.csv historial_todos.csv
+          git diff --staged --quiet || git commit -m "Picks $(date '+%Y-%m-%d')"
+          git push
