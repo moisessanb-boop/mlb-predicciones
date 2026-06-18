@@ -17,3 +17,4 @@ probar_*.py
 prueba.py
 explorar*.py
 .DS_Store
+*.code-workspace
