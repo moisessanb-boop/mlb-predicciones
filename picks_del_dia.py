@@ -90,3 +90,24 @@ print("Leyenda:")
 print("  ALINEADO  ✓ = Bullpen del favorito más fresco → pick más sólido")
 print("  CONTRADICE ✗ = Bullpen del underdog más fresco → pick más riesgoso")
 print("  NEUTRO     ─ = Sin diferencia clara de bullpen")
+
+# ---------- Top 2 Underdogs Fuertes ----------
+df_dog = df_out.copy()
+df_dog['Es_underdog_fuerte'] = (
+    (df_dog['Prob_Dog'] >= 38) &
+    (df_dog['Prob_Dog'] <= 48) &
+    (df_dog['Bullpen_ML'] == 'CONTRADICE ✗')
+)
+
+underdogs = df_dog[df_dog['Es_underdog_fuerte']].sort_values('Prob_Dog', ascending=False).head(2)
+
+print("\n=== TOP 2 UNDERDOGS FUERTES ===\n")
+print("Criterio: probabilidad 38-48% + bullpen del underdog más fresco que el favorito\n")
+
+if underdogs.empty:
+    print("  Sin underdogs fuertes hoy\n")
+else:
+    for i, (_, row) in enumerate(underdogs.iterrows(), 1):
+        print(f"  {i}. {row['Partido']} → {row['Underdog']} ({row['Prob_Dog']:.1f}%)")
+        print(f"     Favorito: {row['Favorito']} ({row['Prob']:.1f}%)  |  Total: {row['Total']:.1f}  |  Bullpen: favorito más cansado")
+        print()
