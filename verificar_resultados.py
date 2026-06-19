@@ -1,7 +1,9 @@
 import pandas as pd
 
 HISTORIAL_TOP5  = 'historial_top5.csv'
-HISTORIAL_TODOS = 'historial_todos.csv'
+HISTORIAL_TODOS     = 'historial_todos.csv'
+HISTORIAL_TOP3      = 'historial_top3.csv'
+HISTORIAL_UNDERDOGS = 'historial_underdogs.csv'
 
 df_datos = pd.read_csv('datos_mlb_limpio.csv')
 df_datos['Fecha'] = pd.to_datetime(df_datos['Fecha']).dt.strftime('%Y-%m-%d')
@@ -114,4 +116,6 @@ def verificar_archivo(archivo, etiqueta):
         print(f"\n  Sin resultado aun: {len(pendientes_tot)} partidos")
 
 verificar_archivo(HISTORIAL_TOP5,  'TOP 5 PICKS')
+verificar_archivo(HISTORIAL_TOP3,      'TOP 3 RECOMENDADOS')
+verificar_archivo(HISTORIAL_UNDERDOGS, 'TOP 2 UNDERDOGS FUERTES')
 verificar_archivo(HISTORIAL_TODOS, 'TODOS LOS PARTIDOS')
