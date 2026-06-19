@@ -35,22 +35,17 @@ jobs:
       - name: Ver pronosticos
         run: python3 ver_pronosticos.py
 
-      - name: Registrar picks
-        run: python3 registrar_prediccion.py
-
       - name: Bullpen fatiga
         run: python3 bullpen_fatiga.py
 
       - name: Picks del dia
         run: python3 picks_del_dia.py
 
-      - name: Verificar resultados de ayer
+      - name: Resumen de ayer
+        run: python3 resumen_ayer.py
+
+      - name: Verificar resultados
         run: python3 verificar_resultados.py
 
-      - name: Guardar resultados
-        run: |
-          git config user.name  "MLB Bot"
-          git config user.email "mlb-bot@github.com"
-          git add historial_top5.csv historial_todos.csv || true
-          git diff --staged --quiet || git commit -m "Picks $(date '+%Y-%m-%d')"
-          git push
+      - name: Registrar picks
+        run: python3 registrar_prediccion.py
