@@ -37,7 +37,8 @@ df_pitch = df_pitch.sort_values(['Team','Fecha'])
 
 partidos  = pd.read_csv('partidos_hoy.csv')
 modelo_ml  = joblib.load('modelo_moneyline_v2.pkl')
-modelo_tot = joblib.load('modelo_total_v2.pkl')
+modelo_tot    = joblib.load('modelo_total_v2.pkl')
+modelo_margen = joblib.load('modelo_margen.pkl')
 
 hoy = pd.Timestamp(datetime.now().date())
 
@@ -111,16 +112,19 @@ for _, partido in partidos.iterrows():
 
     prob_local    = modelo_ml.predict_proba(X_nuevo)[0][1]
     total_estimado = modelo_tot.predict(X_nuevo)[0]
+    margen_estimado = modelo_margen.predict(X_nuevo)[0]
 
     resultados.append({
         'Visitante':             visitante,
         'Local':                 local,
         f'Prob_{local}':         round(prob_local * 100, 1),
         f'Prob_{visitante}':     round((1 - prob_local) * 100, 1),
-        'Total_Estimado':        round(total_estimado, 1)
+        'Total_Estimado':        round(total_estimado, 1),
+        'Margen_Estimado':      round(margen_estimado, 2)
     })
 
 df_resultados = pd.DataFrame(resultados)
 print(df_resultados.to_string(index=False))
 df_resultados.to_csv('predicciones_hoy.csv', index=False)
 print("\nGuardado en predicciones_hoy.csv")
+# Ya cargado arriba — solo agregar modelo_margen
