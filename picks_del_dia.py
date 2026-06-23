@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 
 try:
     pred = pd.read_csv('predicciones_hoy.csv')
@@ -57,7 +58,6 @@ for _, p in pred.iterrows():
 df_out = pd.DataFrame(filas).sort_values('Prob', ascending=False).reset_index(drop=True)
 df_out.index += 1
 
-from datetime import datetime
 hoy = datetime.now().strftime('%Y-%m-%d')
 
 print(f"\n=== PICKS DEL DIA {hoy} ===\n")
@@ -70,9 +70,7 @@ for i, row in df_out.iterrows():
           f"{row['Underdog']:<6} {row['Prob_Dog']:>5.1f}%  "
           f"{row['Total']:>6.1f}  {row['Señal_Total']:<12}  {row['Bullpen_ML']}")
 
-print("\n=== TOP 3 PICKS RECOMENDADOS ===\n")
-print("Criterio: mayor probabilidad + bullpen ALINEADO con el favorito\n")
-
+# --- Top 3 recomendados ---
 alineados = df_out[df_out['Bullpen_ML'] == 'ALINEADO  ✓'].head(3)
 if len(alineados) < 3:
     resto = df_out[df_out['Bullpen_ML'] != 'ALINEADO  ✓'].head(3 - len(alineados))
@@ -80,10 +78,12 @@ if len(alineados) < 3:
 else:
     top3 = alineados.reset_index(drop=True)
 
+print("\n=== TOP 3 PICKS RECOMENDADOS ===\n")
+print("Criterio: mayor probabilidad + bullpen ALINEADO con el favorito\n")
 for i, row in top3.iterrows():
     confianza = '🔥 Alta' if row['Bullpen_ML'] == 'ALINEADO  ✓' else '⚠️  Moderada'
     print(f"  {i+1}. {row['Partido']} → {row['Favorito']} ({row['Prob']:.1f}%)")
-    print(f"     Total: {row['Total']:.1f}  |  Bullpen: {row['Bullpen_ML']}  |  Confianza: {confianza}")
+    print(f"     Total: {row['Total']:.1f}  |  Bullpen: {row['Bullpen_ML']}  |  {confianza}")
     print()
 
 print("Leyenda:")
@@ -91,19 +91,17 @@ print("  ALINEADO  ✓ = Bullpen del favorito más fresco → pick más sólido"
 print("  CONTRADICE ✗ = Bullpen del underdog más fresco → pick más riesgoso")
 print("  NEUTRO     ─ = Sin diferencia clara de bullpen")
 
-# ---------- Top 2 Underdogs Fuertes ----------
-df_dog = df_out.copy()
-df_dog['Es_underdog_fuerte'] = (
-    (df_dog['Prob_Dog'] >= 38) &
-    (df_dog['Prob_Dog'] <= 48) &
-    (df_dog['Bullpen_ML'] == 'CONTRADICE ✗')
+# --- Underdogs fuertes ---
+df_out['Es_underdog_fuerte'] = (
+    (df_out['Prob_Dog'] >= 38) &
+    (df_out['Prob_Dog'] <= 48) &
+    (df_out['Bullpen_ML'] == 'CONTRADICE ✗')
 )
-
-underdogs = df_dog[df_dog['Es_underdog_fuerte']].sort_values('Prob_Dog', ascending=False).head(2)
+underdogs = df_out[df_out['Es_underdog_fuerte']].sort_values(
+    'Prob_Dog', ascending=False).head(2)
 
 print("\n=== TOP 2 UNDERDOGS FUERTES ===\n")
 print("Criterio: probabilidad 38-48% + bullpen del underdog más fresco que el favorito\n")
-
 if underdogs.empty:
     print("  Sin underdogs fuertes hoy\n")
 else:
@@ -111,3 +109,19 @@ else:
         print(f"  {i}. {row['Partido']} → {row['Underdog']} ({row['Prob_Dog']:.1f}%)")
         print(f"     Favorito: {row['Favorito']} ({row['Prob']:.1f}%)  |  Total: {row['Total']:.1f}  |  Bullpen: favorito más cansado")
         print()
+
+# --- Guardar para registro ---
+top3_save = top3[['Partido','Favorito','Prob','Total','Bullpen_ML']].rename(
+    columns={'Favorito':'Seleccion','Prob':'Probabilidad','Total':'Total_Estimado'})
+top3_save.to_csv('top3_recomendados.csv', index=False)
+
+if not underdogs.empty:
+    und_save = underdogs[['Partido','Underdog','Prob_Dog','Total','Señal_Total','Bullpen_ML']].rename(
+        columns={'Underdog':'Seleccion','Prob_Dog':'Probabilidad','Total':'Total_Estimado'})
+    und_save.to_csv('underdogs_fuertes.csv', index=False)
+else:
+    pd.DataFrame(columns=['Partido','Seleccion','Probabilidad',
+                          'Total_Estimado','Señal_Total','Bullpen_ML']).to_csv(
+        'underdogs_fuertes.csv', index=False)
+
+print("top3_recomendados.csv y underdogs_fuertes.csv guardados.")
