@@ -14,7 +14,7 @@ df_todos = pd.read_csv(ARCHIVO_PICKS)
 def preparar_filas(df, fecha):
     filas = df.copy()
     filas.insert(0, 'Fecha', fecha)
-    for col in ['Resultado','Total_Real','Resultado_Total','Margen_Real','Spread_Resultado']:
+    for col in ['Resultado','Total_Real','Resultado_Total','Margen_Real','Spread_Resultado','Bullpen_ML']:
         filas[col] = None
         filas[col] = filas[col].astype('object')
     # Asegurar columnas de spread
