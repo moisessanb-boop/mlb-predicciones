@@ -5,6 +5,7 @@ HISTORIALES = [
     ('historial_todos.csv',     'TODOS LOS PARTIDOS'),
     ('historial_top3.csv',      'TOP 3 RECOMENDADOS'),
     ('historial_underdogs.csv', 'TOP 2 UNDERDOGS FUERTES'),
+    ('historial_spread.csv',    'TOP 3 SPREAD'),
 ]
 
 df_datos = pd.read_csv('datos_mlb_limpio.csv')

@@ -1,6 +1,12 @@
 import pandas as pd
 from datetime import datetime
 
+def recomendar_spread(prob_fav, margen):
+    if prob_fav >= 62 and margen >= 3.5: return "-3.5"
+    elif prob_fav >= 57 and margen >= 2.5: return "-2.5"
+    elif prob_fav >= 53 and margen >= 1.5: return "-1.5"
+    else: return "ML only"
+
 try:
     pred = pd.read_csv('predicciones_hoy.csv')
     bull = pd.read_csv('bullpen_fatiga.csv')
@@ -53,6 +59,8 @@ for _, p in pred.iterrows():
         'Total':       p['Total_Estimado'],
         'Señal_Total': senal_total,
         'Bullpen_ML':  alineacion,
+        'Spread':      recomendar_spread(prob_fav, p.get('Margen_Estimado', 2.5)),
+        'Margen':      p.get('Margen_Estimado', 2.5),
     })
 
 df_out = pd.DataFrame(filas).sort_values('Prob', ascending=False).reset_index(drop=True)
@@ -125,3 +133,39 @@ else:
         'underdogs_fuertes.csv', index=False)
 
 print("top3_recomendados.csv y underdogs_fuertes.csv guardados.")
+
+# ========== TOP 3 RECOMENDADOS SPREAD ==========
+con_spread = df_out[df_out['Spread'] != 'ML only'].copy()
+
+if con_spread.empty:
+    print("\n📊 TOP 3 RECOMENDADOS SPREAD\n")
+    print("  Sin partidos con spread recomendado hoy\n")
+    top3_spread = pd.DataFrame()
+else:
+    con_spread['Score_Spread'] = (
+        con_spread['Prob'] / 100 * 0.5 +
+        (con_spread['Margen'] / 5.0).clip(upper=1.0) * 0.4 +
+        (con_spread['Bullpen_ML'] == 'ALINEADO  ✓').astype(int) * 0.1
+    )
+    top3_spread = con_spread.sort_values('Score_Spread', ascending=False).head(3).reset_index(drop=True)
+
+    print("\n📊 TOP 3 RECOMENDADOS SPREAD\n")
+    print("Criterio: spread real + mayor margen estimado + bullpen alineado\n")
+    for i, row in top3_spread.iterrows():
+        confianza = '🔥 Alta' if row['Bullpen_ML'] == 'ALINEADO  ✓' else '⚠️  Moderada'
+        print(f"  {i+1}. {row['Partido']} → {row['Favorito']} {row['Spread']}")
+        print(f"     Prob ML: {row['Prob']:.1f}%  |  Margen est: {row['Margen']:.1f}c  |  Total: {row['Total']:.1f}  |  {confianza}")
+        print()
+
+# Guardar top3_spread para registro
+if not top3_spread.empty:
+    sp_save = top3_spread[['Partido','Favorito','Prob','Total','Margen',
+                            'Spread','Bullpen_ML']].rename(
+        columns={'Favorito':'Seleccion','Prob':'Probabilidad',
+                 'Total':'Total_Estimado','Margen':'Margen_Estimado'})
+    sp_save.to_csv('top3_spread.csv', index=False)
+    print("top3_spread.csv guardado.")
+else:
+    pd.DataFrame(columns=['Partido','Seleccion','Probabilidad',
+                          'Total_Estimado','Margen_Estimado',
+                          'Spread','Bullpen_ML']).to_csv('top3_spread.csv', index=False)

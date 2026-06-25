@@ -6,6 +6,7 @@ HISTORIAL_TOP5      = 'historial_top5.csv'
 HISTORIAL_TODOS     = 'historial_todos.csv'
 HISTORIAL_TOP3      = 'historial_top3.csv'
 HISTORIAL_UNDERDOGS = 'historial_underdogs.csv'
+HISTORIAL_SPREAD    = 'historial_spread.csv'
 TOP_N = 5
 
 hoy = datetime.now().strftime('%Y-%m-%d')
@@ -61,3 +62,13 @@ try:
         print("[TOP 2 UNDERDOGS] Sin underdogs fuertes hoy.")
 except FileNotFoundError:
     print("[TOP 2 UNDERDOGS] No encontrado — corre picks_del_dia.py primero.")
+
+# Top 3 Spread
+try:
+    df_spread = pd.read_csv('top3_spread.csv')
+    if len(df_spread) > 0:
+        registrar(preparar_filas(df_spread, hoy), HISTORIAL_SPREAD, 'TOP 3 SPREAD')
+    else:
+        print("[TOP 3 SPREAD] Sin partidos con spread hoy.")
+except FileNotFoundError:
+    print("[TOP 3 SPREAD] No encontrado — corre picks_del_dia.py primero.")
