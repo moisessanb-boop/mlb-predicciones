@@ -72,3 +72,13 @@ try:
         print("[TOP 3 SPREAD] Sin partidos con spread hoy.")
 except FileNotFoundError:
     print("[TOP 3 SPREAD] No encontrado — corre picks_del_dia.py primero.")
+
+# Underdogs +1.5
+try:
+    df_dog_sp = pd.read_csv('underdogs_spread.csv')
+    if len(df_dog_sp) > 0:
+        registrar(preparar_filas(df_dog_sp, hoy), 'historial_underdogs_spread.csv', 'UNDERDOGS +1.5')
+    else:
+        print("[UNDERDOGS +1.5] Sin candidatos hoy.")
+except FileNotFoundError:
+    print("[UNDERDOGS +1.5] No encontrado — corre picks_del_dia.py primero.")

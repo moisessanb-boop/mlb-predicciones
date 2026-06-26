@@ -169,3 +169,39 @@ else:
     pd.DataFrame(columns=['Partido','Seleccion','Probabilidad',
                           'Total_Estimado','Margen_Estimado',
                           'Spread','Bullpen_ML']).to_csv('top3_spread.csv', index=False)
+
+# ========== TOP 2 UNDERDOGS +1.5 ==========
+df_dog_spread = df_out.copy()
+df_dog_spread['Dog_Spread_Score'] = (
+    (df_dog_spread['Prob_Dog'] / 100) * 0.5 +
+    (1 - (df_dog_spread['Margen'] / 5.0).clip(upper=1.0)) * 0.4 +
+    (df_dog_spread['Bullpen_ML'] == 'CONTRADICE ✗').astype(int) * 0.1
+)
+
+dog_candidatos = df_dog_spread[
+    df_dog_spread['Prob_Dog'] >= 42
+].sort_values('Dog_Spread_Score', ascending=False).head(2)
+
+print("\n🐶 TOP 2 UNDERDOGS +1.5\n")
+print("Criterio: partido cerrado (prob >= 42%) + bullpen underdog más fresco\n")
+
+if dog_candidatos.empty:
+    print("  Sin underdogs +1.5 recomendados hoy\n")
+    df_dog_save = pd.DataFrame(columns=['Partido','Seleccion','Probabilidad',
+                                         'Total_Estimado','Margen_Estimado',
+                                         'Spread','Bullpen_ML'])
+else:
+    for i, (_, row) in enumerate(dog_candidatos.iterrows(), 1):
+        print(f"  {i}. {row['Partido']} → {row['Underdog']} +1.5")
+        print(f"     Prob favorito: {row['Prob']:.1f}%  |  Margen est: {row['Margen']:.1f}c  |  Bullpen: {row['Bullpen_ML']}")
+        print()
+
+    df_dog_save = dog_candidatos[['Partido','Underdog','Prob_Dog','Total',
+                                   'Margen','Bullpen_ML']].copy()
+    df_dog_save['Spread'] = '+1.5'
+    df_dog_save = df_dog_save.rename(columns={
+        'Underdog':'Seleccion','Prob_Dog':'Probabilidad',
+        'Total':'Total_Estimado','Margen':'Margen_Estimado'})
+
+df_dog_save.to_csv('underdogs_spread.csv', index=False)
+print("underdogs_spread.csv guardado.")
