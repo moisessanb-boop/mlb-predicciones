@@ -11,6 +11,7 @@ python3 verificar_resultados.py
 python3 resumen_ayer.py
 python3 estadisticas.py
 python3 obtener_partidos_hoy.py
+python3 obtener_abridores_hoy.py
 python3 predecir_hoy.py
 python3 bullpen_fatiga.py
 python3 picks_del_dia.py
