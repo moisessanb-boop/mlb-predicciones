@@ -115,3 +115,70 @@ else:
         print(f"  {i}. {row['Partido']} → {row['Dog']} ({row['Prob_Dog']:.1f}%)")
         print(f"     Total: {row['Total']:.1f}  |  Favorito más cansado")
         print()
+
+# ========== FILTROS DE ENTRADA ==========
+UMBRAL_ML     = 55.0
+UMBRAL_SPREAD = 57.0
+
+print(f"\n{'='*50}")
+print(f"  FILTROS DE ENTRADA")
+print(f"{'='*50}")
+
+# Picks ML recomendados (≥55%)
+picks_ml = df[df['Prob'] >= UMBRAL_ML]
+print(f"\n✅ PICKS ML (prob ≥{UMBRAL_ML}%)\n")
+if picks_ml.empty:
+    print("  Sin picks que cumplan el umbral hoy — no entrar")
+else:
+    for i, (_, row) in enumerate(picks_ml.iterrows(), 1):
+        print(f"  {i}. {row['Partido']} → {row['Fav']} ({row['Prob']:.1f}%)  |  Bullpen: {row['Bullpen_ML']}")
+    print()
+
+# Picks Spread recomendados (≥57% + ALINEADO)
+picks_spread = df[
+    (df['Prob'] >= UMBRAL_SPREAD) &
+    (df['Bullpen_ML'] == 'ALINEADO  ✓') &
+    (df['Spread'] != 'ML only')
+]
+print(f"✅ PICKS SPREAD (prob ≥{UMBRAL_SPREAD}% + bullpen ALINEADO)\n")
+if picks_spread.empty:
+    print("  Sin picks de spread que cumplan los filtros hoy — no entrar")
+else:
+    for i, (_, row) in enumerate(picks_spread.iterrows(), 1):
+        print(f"  {i}. {row['Partido']} → {row['Fav']} {row['Spread']} ({row['Prob']:.1f}%)  |  Bullpen: {row['Bullpen_ML']}")
+    print()
+
+print("Umbrales: ML ≥55% | Spread ≥57% + bullpen ALINEADO")
+
+# --- Filtro Underdogs ---
+picks_dog_ml = df[
+    (df['Prob_Dog'] >= 42) &
+    (df['Prob_Dog'] <= 48) &
+    (df['Bullpen_ML'] == 'CONTRADICE ✗') &
+    (df['Margen'] < 2.5)
+]
+
+picks_dog_spread = df[
+    (df['Prob_Dog'] >= 40) &
+    (
+        (df['Bullpen_ML'] == 'CONTRADICE ✗') |
+        (df['Margen'] < 2.0)
+    ) &
+    (df['Spread'] != 'ML only')
+]
+
+print(f"\n✅ UNDERDOGS ML (42-48% + bullpen CONTRADICE + margen <2.5)\n")
+if picks_dog_ml.empty:
+    print("  Sin underdogs ML que cumplan los filtros hoy")
+else:
+    for i, (_, row) in enumerate(picks_dog_ml.iterrows(), 1):
+        print(f"  {i}. {row['Partido']} → {row['Dog']} ML ({row['Prob_Dog']:.1f}%)  |  Margen est: {row['Margen']:.1f}c  |  Bullpen: {row['Bullpen_ML']}")
+print()
+
+print(f"✅ UNDERDOGS +1.5 (≥40% + bullpen CONTRADICE o margen <2.0)\n")
+if picks_dog_spread.empty:
+    print("  Sin underdogs +1.5 que cumplan los filtros hoy")
+else:
+    for i, (_, row) in enumerate(picks_dog_spread.iterrows(), 1):
+        print(f"  {i}. {row['Partido']} → {row['Dog']} +1.5 ({row['Prob_Dog']:.1f}%)  |  Margen est: {row['Margen']:.1f}c  |  Bullpen: {row['Bullpen_ML']}")
+print()
